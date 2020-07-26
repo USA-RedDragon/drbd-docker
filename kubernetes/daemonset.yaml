@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    k8s-app: linstor-satellite
+    kubernetes.io/name: linstor-satellite
+  name: linstor-satellite
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      k8s-app: linstor-satellite
+  template:
+    metadata:
+      labels:
+        k8s-app: linstor-satellite
+    spec:
+      hostNetwork: true
+      initContainers:
+      - name: drbd
+        image: docker.io/jamcswain/drbd-docker:drbd9
+        imagePullPolicy: Always
+        securityContext:
+          capabilities:
+            add:
+            - SYS_MODULE
+          privileged: true
+        resources:
+          requests:
+            cpu: 500m
+            memory: 400Mi
+          limits:
+            cpu: '1'
+            memory: 600Mi
+      containers:
+      - name: linstor-satellite
+        image: docker.io/jamcswain/linstor-satellite:v1.7.3
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      restartPolicy: Always
+      volumes:
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
